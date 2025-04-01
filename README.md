@@ -23,10 +23,13 @@ A FastAPI service that uses Ollama's LLM (Gemma 3 4B) to compare smartphones bas
    git clone https://github.com/yourusername/phone-comparison-api.git
    cd phone-comparison-api
 
+2. pip install -r requirements.txt
+
 ## Sample Request
 
-1. URL http://0.0.0.0:8000/compare-phones/
-2. {
+1. python main.py
+2. URL http://0.0.0.0:8000/compare-phones/
+3. {
   "phones": [
     {
       "name": "Apple iPhone 16e",
