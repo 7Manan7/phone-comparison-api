@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verizon Smartphone Links</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #2a5885;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+        }
+        a {
+            color: #0066cc;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        a.selected {
+            color: #ff6600;
+            text-decoration: underline;
+        }
+        #comparisonResult {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        #questionInput {
+            width: 100%;
+            padding: 8px;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            margin-top: 10px;
+            padding: 8px 15px;
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0055aa;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+<h1>Available Smartphones</h1>
+<ul id="phoneList">
+    <li><a href="https://www.verizon.com/smartphones/apple-iphone-16e/" target="_blank" data-name="Apple iPhone 16e">Apple
+        iPhone 16e</a></li>
+    <li><a href="https://www.verizon.com/smartphones/samsung-galaxy-a36-5g/" target="_blank"
+           data-name="Samsung Galaxy A36 5G">Samsung Galaxy A36 5G</a></li>
+    <li><a href="https://www.verizon.com/smartphones/google-pixel-9a/" target="_blank" data-name="Google Pixel 9a">Google
+        Pixel 9a</a></li>
+    <li><a href="https://www.verizon.com/smartphones/apple-iphone-15/" target="_blank" data-name="Apple iPhone 15">Apple
+        iPhone 15</a></li>
+    <li><a href="https://www.verizon.com/smartphones/samsung-galaxy-s25-ultra/" target="_blank"
+           data-name="Samsung Galaxy S25 Ultra">Samsung Galaxy S25 Ultra</a></li>
+</ul>
+
+<div id="comparisonSection" style="display: none;">
+    <h3>Compare Selected Phones</h3>
+    <p>Selected phones: <span id="selectedPhones"></span></p>
+    <input type="text" id="questionInput"
+           placeholder="Ask a follow-up question (e.g., Which has better battery life?)">
+    <button id="compareButton">Ask Question</button>
+</div>
+
+<div id="comparisonResult"></div>
+
+<script>
+    const selectedPhones = [];
+    let isFirstComparison = true;
+
+    document.querySelectorAll('#phoneList a').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const phoneName = this.getAttribute('data-name');
+
+            // Toggle selection
+            if (this.classList.contains('selected')) {
+                this.classList.remove('selected');
+                const index = selectedPhones.indexOf(phoneName);
+                if (index > -1) {
+                    selectedPhones.splice(index, 1);
+                }
+            } else {
+                this.classList.add('selected');
+                selectedPhones.push(phoneName);
+            }
+
+            updateComparisonSection();
+
+            // Open the link in new tab
+            window.open(this.getAttribute('href'), '_blank');
+        });
+    });
+
+    document.getElementById('compareButton').addEventListener('click', comparePhones);
+    document.getElementById('questionInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            comparePhones();
+        }
+    });
+
+    function updateComparisonSection() {
+        const comparisonSection = document.getElementById('comparisonSection');
+        const selectedPhonesSpan = document.getElementById('selectedPhones');
+
+        if (selectedPhones.length > 1) {
+            comparisonSection.style.display = 'block';
+            selectedPhonesSpan.textContent = selectedPhones.join(', ');
+
+            // Automatically trigger the first comparison
+            if (isFirstComparison) {
+                isFirstComparison = false;
+                document.getElementById('questionInput').value = 'Compare overall specs';
+                comparePhones();
+            }
+        } else {
+            comparisonSection.style.display = 'none';
+            document.getElementById('comparisonResult').innerHTML = '';
+            isFirstComparison = true;
+        }
+    }
+
+    function comparePhones() {
+        const userQuestion = document.getElementById('questionInput').value.trim();
+        const resultDiv = document.getElementById('comparisonResult');
+
+        if (!userQuestion) {
+            alert('Please enter a question');
+            return;
+        }
+
+        resultDiv.innerHTML = '<p class="loading">Comparing phones... Please wait.</p>';
+
+        const payload = {
+            phones: selectedPhones.map(name => ({ name })),
+            user_question: userQuestion
+        };
+
+        fetch('http://127.0.0.1:8000/compare-phones/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            resultDiv.innerHTML = `
+                <h3>Comparison Result</h3>
+                <p><strong>Question:</strong> ${userQuestion}</p>
+                <div>${formatResponse(data)}</div>
+                <p>You can ask another question about these phones above.</p>
+            `;
+            // Clear the input after successful comparison
+            document.getElementById('questionInput').value = '';
+            document.getElementById('questionInput').focus();
+        })
+        .catch(error => {
+            resultDiv.innerHTML = `
+                <p style="color: red;">Error: ${error.message}</p>
+                <p>Please try again or check your connection.</p>
+            `;
+        });
+    }
+
+    function formatResponse(data) {
+        // Only display the comparison field from the API response
+        if (data && data.comparison) {
+            return data.comparison;
+        }
+
+        // Fallback if comparison field doesn't exist
+        if (typeof data === 'string') {
+            return data;
+        }
+
+        if (data.message) {
+            return data.message;
+        }
+
+        return "No comparison data available";
+    }
+</script>
+</body>
+</html>
