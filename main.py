@@ -21,7 +21,7 @@ class PhoneSpec(BaseModel):
 
 class ComparisonRequest(BaseModel):
     phones: List[PhoneSpec]
-    user_question: str = "Which phone is the best value for money based on these specs?"
+    user_question: str
 
 
 def get_phone_details(phone_name: str) -> PhoneSpec:
@@ -76,7 +76,7 @@ async def compare_phones(request: ComparisonRequest):
             completed_phones.append(phone)
 
     # Prepare the prompt with instruction for one-line response
-    prompt = f"""Compare these smartphones and answer in one concise sentence: {request.user_question}
+    prompt = f"""Compare these smartphones and answer in one concise sentence, the phone name is exactly as entered, do not assume its pro or any other variant: {request.user_question}
 
     Phones:
     """
@@ -84,7 +84,7 @@ async def compare_phones(request: ComparisonRequest):
     for phone in completed_phones:
         prompt += f"{phone.name} (${phone.price:.2f}, {phone.specs}); "
 
-    prompt += "\nReply with just one clear comparison sentence, no explanations."
+    prompt += "\nReply with just one clear comparison sentence."
 
     try:
         response = chat_model.generate(

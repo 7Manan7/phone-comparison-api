@@ -67,6 +67,11 @@
             color: #666;
             font-style: italic;
         }
+        .selection-count {
+            font-size: 0.8em;
+            color: #666;
+            margin-left: 10px;
+        }
     </style>
 </head>
 <body>
@@ -85,7 +90,7 @@
 </ul>
 
 <div id="comparisonSection" style="display: none;">
-    <h3>Compare Selected Phones</h3>
+    <h3>Compare Selected Phones <span id="selectionCount" class="selection-count"></span></h3>
     <p>Selected phones: <span id="selectedPhones"></span></p>
     <input type="text" id="questionInput"
            placeholder="Ask a follow-up question (e.g., Which has better battery life?)">
@@ -96,14 +101,14 @@
 
 <script>
     const selectedPhones = [];
-    let isFirstComparison = true;
+    let lastComparisonState = "";
 
     document.querySelectorAll('#phoneList a').forEach(link => {
         link.addEventListener('click', function(e) {
             e.preventDefault();
             const phoneName = this.getAttribute('data-name');
 
-            // Toggle selection
+            // Toggle selections
             if (this.classList.contains('selected')) {
                 this.classList.remove('selected');
                 const index = selectedPhones.indexOf(phoneName);
@@ -132,21 +137,25 @@
     function updateComparisonSection() {
         const comparisonSection = document.getElementById('comparisonSection');
         const selectedPhonesSpan = document.getElementById('selectedPhones');
+        const selectionCountSpan = document.getElementById('selectionCount');
 
-        if (selectedPhones.length > 1) {
+        if (selectedPhones.length >= 2) {
             comparisonSection.style.display = 'block';
             selectedPhonesSpan.textContent = selectedPhones.join(', ');
+            selectionCountSpan.textContent = `(${selectedPhones.length} selected)`;
 
-            // Automatically trigger the first comparison
-            if (isFirstComparison) {
-                isFirstComparison = false;
+            // Check if selection has changed since last comparison
+            const currentState = selectedPhones.join(',');
+            if (currentState !== lastComparisonState) {
+                lastComparisonState = currentState;
                 document.getElementById('questionInput').value = 'Compare overall specs';
                 comparePhones();
             }
         } else {
             comparisonSection.style.display = 'none';
             document.getElementById('comparisonResult').innerHTML = '';
-            isFirstComparison = true;
+            selectionCountSpan.textContent = '';
+            lastComparisonState = "";
         }
     }
 
@@ -186,8 +195,10 @@
                 <div>${formatResponse(data)}</div>
                 <p>You can ask another question about these phones above.</p>
             `;
-            // Clear the input after successful comparison
-            document.getElementById('questionInput').value = '';
+            // Clear the input after successful comparison (except for automatic comparisons)
+            if (userQuestion !== 'Compare overall specs') {
+                document.getElementById('questionInput').value = '';
+            }
             document.getElementById('questionInput').focus();
         })
         .catch(error => {
